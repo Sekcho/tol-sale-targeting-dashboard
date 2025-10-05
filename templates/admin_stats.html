@@ -190,7 +190,7 @@
                     <tr>
                         <td>{{ pv.page_path }}</td>
                         <td><strong>{{ pv.view_count }}</strong></td>
-                        <td>{{ pv.last_viewed.strftime('%Y-%m-%d %H:%M:%S') if pv.last_viewed else 'Never' }}</td>
+                        <td>{{ pv.last_viewed | to_thailand_time }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -218,7 +218,7 @@
                             <span class="badge badge-{{ user.role }}">{{ user.role }}</span>
                         </td>
                         <td>{{ user.login_count }}</td>
-                        <td>{{ user.last_login.strftime('%Y-%m-%d %H:%M:%S') if user.last_login else 'Never' }}</td>
+                        <td>{{ user.last_login | to_thailand_time }}</td>
                         <td>
                             <!-- Edit Role Form -->
                             <form method="post" action="/admin/user/edit-role/{{ user.id }}" style="display: inline-block; margin-right: 10px;">
@@ -258,7 +258,7 @@
                 <tbody>
                     {% for log in recent_logs %}
                     <tr>
-                        <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>{{ log.timestamp | to_thailand_time }}</td>
                         <td>{{ log.user.username if log.user else 'N/A' }}</td>
                         <td>
                             <span class="activity-{{ log.action }}">{{ log.action }}</span>

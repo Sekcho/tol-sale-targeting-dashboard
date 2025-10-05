@@ -9,10 +9,26 @@ from datetime import datetime
 import os
 import json
 from models import db, User, PageView, ActivityLog, get_thailand_time
+import pytz
 
 # Flask server setup
 server = Flask(__name__)
 server.secret_key = os.environ.get("SECRET_KEY", "your_secret_key_change_in_production")
+
+# Jinja2 filter for timezone conversion
+@server.template_filter('to_thailand_time')
+def to_thailand_time(dt):
+    """Convert UTC datetime to Thailand timezone for display"""
+    if dt is None:
+        return 'Never'
+    thailand_tz = pytz.timezone('Asia/Bangkok')
+    # If datetime is naive (no timezone), assume UTC
+    if dt.tzinfo is None:
+        utc_tz = pytz.UTC
+        dt = utc_tz.localize(dt)
+    # Convert to Thailand timezone
+    thailand_dt = dt.astimezone(thailand_tz)
+    return thailand_dt.strftime('%Y-%m-%d %H:%M:%S')
 
 # Database configuration
 if os.environ.get("DATABASE_URL"):
