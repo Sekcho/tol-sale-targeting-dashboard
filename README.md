@@ -3,23 +3,33 @@
 ## ภาพรวม Project
 Dashboard สำหรับทีมขายในการวิเคราะห์และวางแผนการขายตามพื้นที่ โดยใช้ข้อมูล Potential Score, Port Utilization และข้อมูลอื่นๆ
 
+**Production URL:** https://tol-sales-dashboard.onrender.com
+
 ## โครงสร้างไฟล์
 
 ```
 TOL_Login_Dash/
 ├── app.py                          # Dashboard หลัก (ใช้ OpenStreetMap)
 ├── app_sales.py                    # Sales Journey version (มีตารางและ Navigate)
-├── app_sales_v2.py                 # Sales Journey v2 (Responsive - Mobile/Tablet/Desktop)
-├── app1.py, app2.py, applogin.py  # ไฟล์เก่า (archive)
-├── database.py                     # Database configuration
-├── import_users.py                 # User import script
+├── app_sales_v2.py                 # Sales Journey v2 - Production (Responsive + DB + Analytics) ⭐
+├── models.py                       # Database models (User, PageView, ActivityLog)
+├── init_db.py                      # Database initialization script
+├── build.sh                        # Render build script
+├── runtime.txt                     # Python version specification
+├── .python-version                 # Python version for Render
+├── render.yaml                     # Render configuration
 ├── requirements.txt                # Python dependencies
 ├── templates/
-│   └── login.html                  # Login page template
-├── static/                         # Static files
-├── auth/
-│   └── models.py                   # User models
-└── Prepared_True_Dataset_Updated.csv  # ข้อมูลหลัก
+│   ├── login.html                  # Login page
+│   ├── register.html               # User registration (Admin only)
+│   └── admin_stats.html            # Admin statistics dashboard
+├── static/                         # Static files (images, etc.)
+├── auth/                           # Legacy auth folder
+│   └── models.py                   # Old user models
+├── Prepared_True_Dataset_Updated.csv  # ข้อมูลหลัก
+├── POTENTIAL_SCORE_CRITERIA.md     # สูตรและ criteria การคำนวณคะแนน
+├── USER_MANUAL.md                  # คู่มือการใช้งานสำหรับ user
+└── README.md                       # เอกสารนี้
 ```
 
 ## ความแตกต่างระหว่าง app.py, app_sales.py และ app_sales_v2.py
@@ -39,84 +49,174 @@ TOL_Login_Dash/
 - เหมาะสำหรับ Sales ในสนาม
 - URL: `http://127.0.0.1:8050/dashboard/`
 
-### app_sales_v2.py (Sales Journey v2 - Responsive) ⭐ แนะนำ
-- **ทุกฟีเจอร์จาก app_sales.py**
+### app_sales_v2.py (Sales Journey v2 - Production) ⭐ แนะนำ
+**ทุกฟีเจอร์จาก app_sales.py + ฟีเจอร์ใหม่:**
+
+#### UI/UX Features:
 - ✨ **Responsive Design** - รองรับ Mobile, Tablet, iPad, Desktop
 - 📱 **Mobile-First UI** - ออกแบบให้ใช้งานบนมือถือได้ลื่นไหล
 - 🎨 **Bootstrap Theme** - UI สวยงาม มืออาชีพ เป็นสัดส่วน
 - 📂 **Collapsible Filters** - ซ่อน/แสดง Filter บนมือถือเพื่อประหยัดพื้นที่
 - 🔝 **Sticky Navbar** - เมนูบนคงที่ เข้าถึงง่าย
 - 📏 **Smart Layout** - ปรับขนาดอัตโนมัติตามหน้าจอ
-  - Mobile: Filter + Map/Table แบบ Stack
-  - Tablet: Filter 33% / Map 67%
-  - Desktop: Filter 25% / Map 75%
-- URL: `http://127.0.0.1:8051/dashboard/` (Port 8051)
 
-## การติดตั้ง
+#### Backend Features:
+- 🗄️ **Database Integration** - PostgreSQL (Production) / SQLite (Development)
+- 👥 **User Management** - Role-based access control (Admin/User)
+- 📊 **Analytics & Logging** - Page views, Activity logs, User statistics
+- 🔐 **Secure Authentication** - Password hashing with bcrypt
+- 📝 **User Registration** - Admin can create new users
 
-### 1. สร้าง Virtual Environment
+#### URLs:
+- Local: `http://127.0.0.1:8051/dashboard/`
+- Production: `https://tol-sales-dashboard.onrender.com/dashboard/`
+
+## URLs ทั้งหมด (app_sales_v2.py)
+
+### Production
+- **Login:** https://tol-sales-dashboard.onrender.com/login
+- **Dashboard:** https://tol-sales-dashboard.onrender.com/dashboard/
+- **Register User (Admin):** https://tol-sales-dashboard.onrender.com/register
+- **Admin Stats (Admin):** https://tol-sales-dashboard.onrender.com/admin/stats
+- **Logout:** https://tol-sales-dashboard.onrender.com/logout
+
+### Access Control
+| URL | User | Admin |
+|-----|------|-------|
+| `/login` | ✅ | ✅ |
+| `/dashboard/` | ✅ | ✅ |
+| `/register` | ❌ | ✅ |
+| `/admin/stats` | ❌ | ✅ |
+| `/logout` | ✅ | ✅ |
+
+## การติดตั้ง (Local Development)
+
+### 1. Clone Repository
+```bash
+git clone https://github.com/Sekcho/tol-sale-targeting-dashboard.git
+cd tol-sale-targeting-dashboard
+```
+
+### 2. สร้าง Virtual Environment
 ```bash
 python -m venv venv
 venv\Scripts\activate  # Windows
+source venv/bin/activate  # Mac/Linux
 ```
 
-### 2. ติดตั้ง Dependencies
+### 3. ติดตั้ง Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. รันแอพ
-
-**Dashboard หลัก:**
+### 4. Initialize Database
 ```bash
-python app.py
+python init_db.py
 ```
+จะสร้างไฟล์ `app.db` (SQLite) และ default users:
+- Admin: `admin` / `admin123`
+- User: `user` / `password`
 
-**Sales Journey:**
-```bash
-python app_sales.py
-```
+### 5. รันแอพ
 
-**Sales Journey v2 (Responsive - แนะนำ):**
+**Sales Journey v2 (Production - แนะนำ):**
 ```bash
 python app_sales_v2.py
 ```
 
+**Dashboard อื่นๆ (Legacy):**
+```bash
+python app.py          # Dashboard หลัก
+python app_sales.py    # Sales Journey v1
+```
+
 เปิดเบราว์เซอร์:
-- app.py และ app_sales.py: `http://127.0.0.1:8050/login`
 - app_sales_v2.py: `http://127.0.0.1:8051/login`
+- app.py และ app_sales.py: `http://127.0.0.1:8050/login`
 
 **Default Login:**
 - Username: `admin` | Password: `admin123`
 - Username: `user` | Password: `password`
 
+## Production Deployment (Render)
+
+### Database Setup
+1. สร้าง PostgreSQL database บน Render
+2. Copy Internal Database URL
+3. เพิ่ม Environment Variable: `DATABASE_URL`
+
+### Environment Variables
+```bash
+DATABASE_URL=postgresql://...  # จาก Render PostgreSQL
+SECRET_KEY=your-secret-key     # Random string
+FLASK_ENV=production
+```
+
+### Build & Deploy
+Render จะใช้ `build.sh` อัตโนมัติ:
+1. Install dependencies
+2. Initialize database
+3. Start gunicorn server
+
 ## ฟีเจอร์หลัก
 
-### 1. Authentication
-- Login/Logout system
-- Flask-Login integration
-- Protected routes
+### 1. Authentication & User Management
+- 🔐 Login/Logout system with Flask-Login
+- 👤 Role-based access control (Admin/User)
+- 🔑 Password hashing with bcrypt
+- 📝 User registration (Admin only)
+- 🚪 Protected routes with decorators
 
 ### 2. Data Visualization
-- Interactive map with bubble markers
-- Color by Potential Score (Blues scale)
-- Size by Port Use
-- Hover info แสดงข้อมูลละเอียด
+- 🗺️ Interactive map with bubble markers
+- 🎨 Color by Potential Score (Green = High, Yellow = Medium, Red = Low)
+- 📏 Size by Port Use
+- 💬 Hover info แสดงข้อมูลละเอียด (Household, Port, Market Share, etc.)
+- 📊 Dynamic updates based on filters
 
 ### 3. Filters
-- **Location Filters:** Province → District → Sub-district → Happy Block
+- **Quick Filters:**
+  - 🔥 High Potential (>70)
+  - 📍 Show All
+- **Location Filters (Cascading):**
+  - Province → District → Sub-district → Happy Block
 - **Range Sliders:**
-  - Net Add
-  - Potential Score
-  - Port Utilization
-  - Market Share True
-  - L2 Aging
+  - Net Add (ลูกค้าเพิ่มใหม่)
+  - Potential Score (0-100)
+  - Port Utilization (%)
+  - Market Share True (%)
+  - L2 Aging (เดือน)
 
-### 4. Sales Journey Features (app_sales.py only)
+### 4. Sales Journey Features
 - 🎯 Quick Filter: High Potential (>70)
-- 📋 Location Table (sortable, paginated)
-- 🗺️ Navigate buttons (Google Maps integration)
-- 🎨 Color-coded rows by Potential Score
+- 📋 Location Table (sortable, paginated, 10 items/page)
+- 🗺️ Navigate buttons → Google Maps with directions
+- 🎨 Color-coded rows by Potential Score:
+  - 🟢 Green: ≥70 (High priority)
+  - 🟡 Yellow: 50-69 (Medium)
+  - 🔴 Red: <50 (Low)
+- 📱 Mobile-optimized navigation
+
+### 5. Analytics & Monitoring (Admin Only)
+- 📊 **Page View Counter**
+  - Track visits to each page
+  - Last viewed timestamp
+- 📝 **Activity Logs**
+  - Login/logout tracking
+  - Dashboard views
+  - Failed login attempts
+  - IP address and User-Agent logging
+- 👥 **User Statistics**
+  - Total users
+  - Login count per user
+  - Last login timestamp
+  - Role distribution
+
+### 6. Database Features
+- 🗄️ PostgreSQL (Production) / SQLite (Development)
+- 💾 Persistent user accounts
+- 📊 Historical analytics data
+- 🔄 Auto-migration on deployment
 
 ## Data Preprocessing
 
@@ -202,11 +302,34 @@ fig.update_layout(
 
 ## Tech Stack
 
-- **Backend:** Flask, Flask-Login
-- **Frontend:** Dash, Plotly, Dash Bootstrap Components (v2 only)
-- **Data:** Pandas, NumPy
-- **Map:** Plotly Mapbox (OpenStreetMap)
-- **UI Framework:** Bootstrap 5 (app_sales_v2.py)
+### Backend
+- **Framework:** Flask 3.0.3
+- **Authentication:** Flask-Login 0.6.3, Flask-Bcrypt 1.0.1
+- **Database:**
+  - PostgreSQL (Production) via psycopg2-binary 2.9.10
+  - SQLite (Development)
+- **ORM:** Flask-SQLAlchemy 3.1.1, SQLAlchemy 2.0.43
+- **Server:** Gunicorn 21.2.0 (Production)
+
+### Frontend
+- **Framework:** Dash 2.18.2, Plotly 5.24.1
+- **Components:** Dash Bootstrap Components 1.6.0
+- **UI:** Bootstrap 5, Responsive Design
+
+### Data Processing
+- **Libraries:** Pandas 2.2.3, NumPy 2.2.2
+- **Visualization:** Plotly Mapbox (OpenStreetMap)
+
+### Deployment
+- **Platform:** Render.com
+- **Python:** 3.11.11
+- **Database:** PostgreSQL 14+
+
+## เอกสารประกอบ
+
+- 📖 [USER_MANUAL.md](./USER_MANUAL.md) - คู่มือการใช้งานสำหรับ user
+- 📊 [POTENTIAL_SCORE_CRITERIA.md](./POTENTIAL_SCORE_CRITERIA.md) - สูตรและ criteria การคำนวณคะแนน
+- 🗂️ [README.md](./README.md) - เอกสารนี้ (Technical documentation)
 
 ## License
 
@@ -215,10 +338,12 @@ Internal use only - True Corporation
 ## Contact
 
 สำหรับคำถามหรือข้อเสนอแนะ:
-- Project Owner: [ชื่อผู้รับผิดชอบ]
-- Email: [อีเมล]
+- GitHub Repository: https://github.com/Sekcho/tol-sale-targeting-dashboard
+- Production URL: https://tol-sales-dashboard.onrender.com
 
 ---
 
 **Last Updated:** 2025-10-05
-**Version:** 2.0 (Sales Journey Update)
+**Version:** 3.0 (Production Deployment with Full User Management & Analytics)
+**Python Version:** 3.11.11
+**Main App:** `app_sales_v2.py`
