@@ -627,6 +627,7 @@ def admin_stats():
         login_count = ActivityLog.query.filter_by(user_id=user.id, action='login').count()
         last_login = ActivityLog.query.filter_by(user_id=user.id, action='login').order_by(ActivityLog.timestamp.desc()).first()
         user_stats.append({
+            'id': user.id,
             'username': user.username,
             'role': user.role,
             'login_count': login_count,
@@ -637,6 +638,54 @@ def admin_stats():
                          page_views=page_views,
                          recent_logs=recent_logs,
                          user_stats=user_stats)
+
+@server.route("/admin/user/delete/<int:user_id>", methods=["POST"])
+@login_required
+def delete_user(user_id):
+    """Delete a user (Admin only)"""
+    if current_user.role != "admin":
+        return "Unauthorized", 403
+
+    # Prevent deleting yourself
+    if user_id == current_user.id:
+        return redirect(url_for('admin_stats') + '?error=cannot_delete_self')
+
+    user = User.query.get(user_id)
+    if user:
+        username = user.username
+        db.session.delete(user)
+        db.session.commit()
+        log_activity(current_user.id, 'delete_user', {'deleted_username': username})
+
+    return redirect(url_for('admin_stats'))
+
+@server.route("/admin/user/edit-role/<int:user_id>", methods=["POST"])
+@login_required
+def edit_user_role(user_id):
+    """Edit user role (Admin only)"""
+    if current_user.role != "admin":
+        return "Unauthorized", 403
+
+    # Prevent changing your own role
+    if user_id == current_user.id:
+        return redirect(url_for('admin_stats') + '?error=cannot_change_own_role')
+
+    new_role = request.form.get('role')
+    if new_role not in ['admin', 'user']:
+        return redirect(url_for('admin_stats') + '?error=invalid_role')
+
+    user = User.query.get(user_id)
+    if user:
+        old_role = user.role
+        user.role = new_role
+        db.session.commit()
+        log_activity(current_user.id, 'edit_user_role', {
+            'username': user.username,
+            'old_role': old_role,
+            'new_role': new_role
+        })
+
+    return redirect(url_for('admin_stats'))
 
 @server.route("/api/page-views")
 @login_required
