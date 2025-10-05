@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.express as px
 import numpy as np
 from datetime import datetime
+import os
 
 # Flask server setup
 server = Flask(__name__)
@@ -39,8 +40,8 @@ def authenticate(username, password):
         return user
     return None
 
-# Load Dataset
-data_path = 'd:/2025/Dash/TOL_Login_Dash/Prepared_True_Dataset_Updated.csv'
+# Load Dataset - Use relative path that works on both Windows and Linux
+data_path = os.path.join(os.path.dirname(__file__), 'Prepared_True_Dataset_Updated.csv')
 data = pd.read_csv(data_path)
 
 # Data Preprocessing
