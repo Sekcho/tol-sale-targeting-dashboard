@@ -583,8 +583,13 @@ def logout():
     return redirect("/login")
 
 @server.route("/register", methods=["GET", "POST"])
+@login_required
 def register():
-    """User registration page (admin only for now, can be modified)"""
+    """User registration page (admin only)"""
+    # Check if user is admin
+    if current_user.role != "admin":
+        return "Unauthorized - Admin access required", 403
+
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
