@@ -701,8 +701,8 @@ def api_page_views():
 @server.before_request
 def restrict_dashboard():
     """Track page views and restrict access"""
-    # Track dashboard views
-    if request.path.startswith("/dashboard") and current_user.is_authenticated:
+    # Track dashboard views - only log main page load, not Dash AJAX requests
+    if request.path == "/dashboard/" and current_user.is_authenticated:
         increment_page_view('/dashboard')
         log_activity(current_user.id, 'view_dashboard')
 
