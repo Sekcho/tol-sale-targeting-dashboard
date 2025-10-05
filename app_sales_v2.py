@@ -8,7 +8,7 @@ import numpy as np
 from datetime import datetime
 import os
 import json
-from models import db, User, PageView, ActivityLog
+from models import db, User, PageView, ActivityLog, get_thailand_time
 
 # Flask server setup
 server = Flask(__name__)
@@ -66,7 +66,7 @@ def increment_page_view(page_path):
         page_view = PageView.query.filter_by(page_path=page_path).first()
         if page_view:
             page_view.view_count += 1
-            page_view.last_viewed = datetime.utcnow()
+            page_view.last_viewed = get_thailand_time()
         else:
             page_view = PageView(page_path=page_path, view_count=1)
             db.session.add(page_view)
