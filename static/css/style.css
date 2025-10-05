@@ -1,0 +1,30 @@
+/* สำหรับหน้าจอมือถือ */
+@media screen and (max-width: 768px) {
+    .dash-graph {
+        width: 100% !important;
+        height: 50vh !important;
+    }
+
+    .dash-dropdown {
+        width: 100% !important;
+        margin-bottom: 10px;
+    }
+
+    .dash-slider {
+        width: 100% !important;
+        margin-bottom: 10px;
+    }
+}
+
+/* สำหรับหน้าจอแท็บเล็ต */
+@media screen and (max-width: 1024px) {
+    .dash-graph {
+        width: 100% !important;
+        height: 60vh !important;
+    }
+
+    .dash-dropdown {
+        width: 100% !important;
+        margin-bottom: 10px;
+    }
+}
