@@ -1,5 +1,5 @@
-from flask import Flask, render_template, request, redirect, url_for
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from dash import Dash, dcc, html, Input, Output, dash_table, State
 import dash_bootstrap_components as dbc
 import pandas as pd
@@ -7,38 +7,73 @@ import plotly.express as px
 import numpy as np
 from datetime import datetime
 import os
+import json
+from models import db, User, PageView, ActivityLog
 
 # Flask server setup
 server = Flask(__name__)
-server.secret_key = "your_secret_key"
+server.secret_key = os.environ.get("SECRET_KEY", "your_secret_key_change_in_production")
+
+# Database configuration
+if os.environ.get("DATABASE_URL"):
+    # Production (Render) - PostgreSQL
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    server.config["SQLALCHEMY_DATABASE_URI"] = database_url
+else:
+    # Development - SQLite
+    server.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
+
+server.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+server.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 300,
+}
+
+# Initialize database
+db.init_app(server)
 
 # Flask-Login setup
 login_manager = LoginManager()
 login_manager.init_app(server)
 login_manager.login_view = "/login"
 
-# User Authentication Setup
-class User(UserMixin):
-    def __init__(self, id, username, password):
-        self.id = id
-        self.username = username
-        self.password = password
-
-# Predefined users
-users = {
-    "admin": User(1, "admin", "admin123"),
-    "user": User(2, "user", "password")
-}
-
 @login_manager.user_loader
 def load_user(user_id):
-    return next((u for u in users.values() if str(u.id) == user_id), None)
+    return User.query.get(int(user_id))
 
-def authenticate(username, password):
-    user = users.get(username)
-    if user and user.password == password:
-        return user
-    return None
+# Helper functions
+def log_activity(user_id, action, details=None):
+    """Log user activity to database"""
+    try:
+        activity = ActivityLog(
+            user_id=user_id,
+            action=action,
+            details=json.dumps(details) if details else None,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        db.session.add(activity)
+        db.session.commit()
+    except Exception as e:
+        print(f"Error logging activity: {e}")
+        db.session.rollback()
+
+def increment_page_view(page_path):
+    """Increment page view counter"""
+    try:
+        page_view = PageView.query.filter_by(page_path=page_path).first()
+        if page_view:
+            page_view.view_count += 1
+            page_view.last_viewed = datetime.utcnow()
+        else:
+            page_view = PageView(page_path=page_path, view_count=1)
+            db.session.add(page_view)
+        db.session.commit()
+    except Exception as e:
+        print(f"Error incrementing page view: {e}")
+        db.session.rollback()
 
 # Load Dataset - Use relative path that works on both Windows and Linux
 data_path = os.path.join(os.path.dirname(__file__), 'Prepared_True_Dataset_Updated.csv')
@@ -511,26 +546,113 @@ def update_map(province, district, subdistrict, happy_block, net_add_range, pote
     return fig, potential_score_range, table_dict, header_text
 
 # Flask Routes
+@server.route("/")
+def index():
+    """Redirect root to login or dashboard"""
+    if current_user.is_authenticated:
+        return redirect("/dashboard/")
+    return redirect("/login")
+
 @server.route("/login", methods=["GET", "POST"])
 def login():
+    if current_user.is_authenticated:
+        return redirect("/dashboard/")
+
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
-        user = authenticate(username, password)
-        if user:
+        user = User.query.filter_by(username=username).first()
+
+        if user and user.check_password(password):
             login_user(user)
+            log_activity(user.id, 'login')
+            increment_page_view('/login')
             return redirect("/dashboard/")
-        return "Invalid credentials", 401
+
+        log_activity(None, 'failed_login', {'username': username})
+        return render_template("login.html", error="Invalid credentials")
+
+    increment_page_view('/login')
     return render_template("login.html")
 
 @server.route("/logout")
 @login_required
 def logout():
+    log_activity(current_user.id, 'logout')
     logout_user()
     return redirect("/login")
 
+@server.route("/register", methods=["GET", "POST"])
+def register():
+    """User registration page (admin only for now, can be modified)"""
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+        role = request.form.get("role", "user")
+
+        if User.query.filter_by(username=username).first():
+            return render_template("register.html", error="Username already exists")
+
+        user = User(username=username, role=role)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+
+        return render_template("register.html", success=f"User {username} created successfully!")
+
+    return render_template("register.html")
+
+@server.route("/admin/stats")
+@login_required
+def admin_stats():
+    """Admin page to view statistics"""
+    if current_user.role != "admin":
+        return "Unauthorized", 403
+
+    # Get page views
+    page_views = PageView.query.all()
+
+    # Get recent activity logs
+    recent_logs = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).limit(100).all()
+
+    # Get user statistics
+    users = User.query.all()
+    user_stats = []
+    for user in users:
+        login_count = ActivityLog.query.filter_by(user_id=user.id, action='login').count()
+        last_login = ActivityLog.query.filter_by(user_id=user.id, action='login').order_by(ActivityLog.timestamp.desc()).first()
+        user_stats.append({
+            'username': user.username,
+            'role': user.role,
+            'login_count': login_count,
+            'last_login': last_login.timestamp if last_login else None
+        })
+
+    return render_template("admin_stats.html",
+                         page_views=page_views,
+                         recent_logs=recent_logs,
+                         user_stats=user_stats)
+
+@server.route("/api/page-views")
+@login_required
+def api_page_views():
+    """API endpoint to get page view stats"""
+    page_views = PageView.query.all()
+    return jsonify([{
+        'page_path': pv.page_path,
+        'view_count': pv.view_count,
+        'last_viewed': pv.last_viewed.isoformat() if pv.last_viewed else None
+    } for pv in page_views])
+
 @server.before_request
 def restrict_dashboard():
+    """Track page views and restrict access"""
+    # Track dashboard views
+    if request.path.startswith("/dashboard") and current_user.is_authenticated:
+        increment_page_view('/dashboard')
+        log_activity(current_user.id, 'view_dashboard')
+
+    # Restrict dashboard access to authenticated users only
     if request.path.startswith("/dashboard") and not current_user.is_authenticated:
         return redirect("/login")
 
