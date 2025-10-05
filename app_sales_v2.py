@@ -562,6 +562,11 @@ def update_map(province, district, subdistrict, happy_block, net_add_range, pote
     return fig, potential_score_range, table_dict, header_text
 
 # Flask Routes
+@server.route("/health")
+def health():
+    """Health check endpoint for Render"""
+    return {"status": "ok"}, 200
+
 @server.route("/")
 def index():
     """Redirect root to login or dashboard"""
