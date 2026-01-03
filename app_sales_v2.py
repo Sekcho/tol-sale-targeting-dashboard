@@ -50,6 +50,45 @@ server.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 # Initialize database
 db.init_app(server)
 
+# Initialize database tables and default users on startup
+def init_database():
+    """Initialize database tables and create default users if they don't exist"""
+    with server.app_context():
+        try:
+            # Create all tables
+            db.create_all()
+            print("[OK] Database tables created/verified successfully!")
+
+            # Check if admin user exists
+            admin = User.query.filter_by(username='admin').first()
+            if not admin:
+                print("Creating default admin user...")
+                admin = User(username='admin', role='admin')
+                admin.set_password('admin123')
+                db.session.add(admin)
+                db.session.commit()
+                print("[OK] Admin user created (username: admin, password: admin123)")
+
+            # Check if regular user exists
+            user = User.query.filter_by(username='user').first()
+            if not user:
+                print("Creating default regular user...")
+                user = User(username='user', role='user')
+                user.set_password('password')
+                db.session.add(user)
+                db.session.commit()
+                print("[OK] Regular user created (username: user, password: password)")
+
+            print("[OK] Database initialization completed!")
+        except Exception as e:
+            print(f"[ERROR] Database initialization failed: {e}")
+            # Don't crash the app, just log the error
+            import traceback
+            traceback.print_exc()
+
+# Run database initialization
+init_database()
+
 # Flask-Login setup
 login_manager = LoginManager()
 login_manager.init_app(server)

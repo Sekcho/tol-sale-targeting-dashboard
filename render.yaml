@@ -10,8 +10,8 @@ services:
     env: python
     region: singapore
     plan: free
-    buildCommand: bash build.sh
-    startCommand: gunicorn app_sales_v2:server --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: gunicorn app_sales_v2:server --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 --preload
     healthCheckPath: /health
     envVars:
       - key: FLASK_ENV
