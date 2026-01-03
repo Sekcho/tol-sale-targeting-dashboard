@@ -580,18 +580,22 @@ def login():
         return redirect("/dashboard/")
 
     if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
-        user = User.query.filter_by(username=username).first()
+        try:
+            username = request.form["username"]
+            password = request.form["password"]
+            user = User.query.filter_by(username=username).first()
 
-        if user and user.check_password(password):
-            login_user(user)
-            log_activity(user.id, 'login')
-            increment_page_view('/login')
-            return redirect("/dashboard/")
+            if user and user.check_password(password):
+                login_user(user)
+                log_activity(user.id, 'login')
+                increment_page_view('/login')
+                return redirect("/dashboard/")
 
-        log_activity(None, 'failed_login', {'username': username})
-        return render_template("login.html", error="Invalid credentials")
+            log_activity(None, 'failed_login', {'username': username})
+            return render_template("login.html", error="Invalid credentials")
+        except Exception as e:
+            print(f"Login error: {e}")
+            return render_template("login.html", error="Database connection error. Please try again later.")
 
     increment_page_view('/login')
     return render_template("login.html")

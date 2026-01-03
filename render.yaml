@@ -1,3 +1,9 @@
+databases:
+  - name: tol-sales-db
+    plan: free
+    databaseName: tol_sales_dashboard
+    user: tol_admin
+
 services:
   - type: web
     name: tol-sales-dashboard
@@ -18,13 +24,7 @@ services:
         value: True
       - key: PYTHON_VERSION
         value: 3.11.0
-
-  - type: pserv
-    name: tol-sales-db
-    env: docker
-    region: singapore
-    plan: free
-    disk:
-      name: postgres-data
-      mountPath: /var/lib/postgresql/data
-      sizeGB: 1
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tol-sales-db
+          property: connectionString
