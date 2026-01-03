@@ -12,16 +12,5 @@ pip install --upgrade pip
 echo "Installing dependencies..."
 pip install -r requirements.txt
 
-# Initialize database (allow failure but show warning)
-echo "Initializing database..."
-if python init_db.py; then
-    echo "[OK] Database initialized successfully!"
-else
-    echo "=========================================="
-    echo "WARNING: Database initialization failed!"
-    echo "This may cause login errors at runtime."
-    echo "Check DATABASE_URL environment variable."
-    echo "=========================================="
-fi
-
 echo "===== Build process completed ====="
+echo "Note: Database will be initialized at runtime by app_sales_v2.py"
